@@ -86,7 +86,6 @@ func runAnalyzer(cfg *Config) func(pass *analysis.Pass) (interface{}, error) {
 						pass.Reportf(node.Pos(), "should not use %s to package name, %s", parts[len(parts)-1], desc)
 					}
 				}
-				_ = group
 
 				for _, imp := range f.Imports {
 					impGroup, impParts := splitPackagePath(imp.Path.Value)
