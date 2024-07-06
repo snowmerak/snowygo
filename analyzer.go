@@ -87,6 +87,15 @@ func runAnalyzer(cfg *Config) func(pass *analysis.Pass) (interface{}, error) {
 					}
 				}
 
+				if group != "" || len(parts) != 1 {
+					root := parts[0]
+					switch root {
+					case LibraryGroup, InternalGroup, CommandGroup, ModelGroup, GenGroup:
+					default:
+						pass.Reportf(node.Pos(), "should use one of the following package names: %s, %s, %s, %s, %s", LibraryGroup, InternalGroup, CommandGroup, ModelGroup, GenGroup)
+					}
+				}
+
 				for _, imp := range f.Imports {
 					impGroup, impParts := splitPackagePath(imp.Path.Value)
 
