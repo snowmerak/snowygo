@@ -36,7 +36,9 @@ const (
 	LibraryGroup   = "lib"
 	LibraryClient  = "client"
 	LibraryServer  = "server"
+	LibraryService = "service"
 	LibraryUtility = "util"
+	LibrarySystem  = "sys"
 
 	InternalGroup = "internal"
 	CommandGroup  = "cmd"
@@ -96,6 +98,16 @@ func runAnalyzer(cfg *Config) func(pass *analysis.Pass) (interface{}, error) {
 					}
 				}
 
+				if group == LibraryGroup {
+					if len(parts) > 0 {
+						switch parts[0] {
+						case LibraryClient, LibraryServer, LibraryService, LibraryUtility, LibrarySystem:
+						default:
+							pass.Reportf(node.Pos(), "should use one of the following package names: %s, %s, %s, %s, %s", LibraryClient, LibraryServer, LibraryService, LibraryUtility, LibrarySystem)
+						}
+					}
+				}
+
 				for _, imp := range f.Imports {
 					impGroup, impParts := splitPackagePath(imp.Path.Value)
 
@@ -110,11 +122,63 @@ func runAnalyzer(cfg *Config) func(pass *analysis.Pass) (interface{}, error) {
 							pass.Reportf(imp.Pos(), "must not import from internal package")
 						case CommandGroup:
 							pass.Reportf(imp.Pos(), "must not import from command package")
+						case LibraryGroup:
+							if len(parts) > 0 && len(impParts) > 0 {
+								subGroup := parts[0]
+								impSubGroup := impParts[0]
+								switch subGroup {
+								case LibraryClient:
+									switch impSubGroup {
+									case LibraryServer:
+										pass.Reportf(imp.Pos(), "must not import from server package")
+									case LibraryService:
+										pass.Reportf(imp.Pos(), "must not import from service package")
+									}
+								case LibraryServer:
+									switch impSubGroup {
+									case LibraryClient:
+										pass.Reportf(imp.Pos(), "must not import from client package")
+									case LibraryService:
+										pass.Reportf(imp.Pos(), "must not import from service package")
+									}
+								case LibraryService:
+									switch impSubGroup {
+									case LibraryClient:
+										pass.Reportf(imp.Pos(), "must not import from client package")
+									case LibraryServer:
+										pass.Reportf(imp.Pos(), "must not import from server package")
+									}
+								case LibraryUtility:
+									switch impSubGroup {
+									case LibrarySystem:
+										pass.Reportf(imp.Pos(), "must not import from system package")
+									case LibraryClient:
+										pass.Reportf(imp.Pos(), "must not import from client package")
+									case LibraryServer:
+										pass.Reportf(imp.Pos(), "must not import from server package")
+									case LibraryService:
+										pass.Reportf(imp.Pos(), "must not import from service package")
+									}
+								case LibrarySystem:
+									switch impSubGroup {
+									case LibraryUtility:
+										pass.Reportf(imp.Pos(), "must not import from utility package")
+									case LibraryClient:
+										pass.Reportf(imp.Pos(), "must not import from client package")
+									case LibraryServer:
+										pass.Reportf(imp.Pos(), "must not import from server package")
+									case LibraryService:
+										pass.Reportf(imp.Pos(), "must not import from service package")
+									}
+								}
+							}
 						}
 					case InternalGroup:
 						switch impGroup {
 						case CommandGroup:
 							pass.Reportf(imp.Pos(), "must not import from command package")
+						case InternalGroup:
+							pass.Reportf(imp.Pos(), "must not import from internal package")
 						}
 					case ModelGroup:
 						fallthrough
